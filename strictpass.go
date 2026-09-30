@@ -20,6 +20,7 @@ type config struct {
 	lenient    bool
 	minLength  int
 	userInputs []string
+	blocklist  map[string]bool
 }
 
 // Option configures how a password is evaluated.
@@ -52,8 +53,27 @@ func UserInputs(inputs ...string) Option {
 	}
 }
 
+// WithBlocklist adds passwords that must be rejected on top of the
+// built-in list, for example terms specific to the application or a
+// breach list the caller already holds. Entries are matched against the
+// whole password, ignoring case, and apply in both strict and lenient
+// mode. Empty entries are ignored.
+func WithBlocklist(words ...string) Option {
+	return func(c *config) {
+		if c.blocklist == nil {
+			c.blocklist = make(map[string]bool, len(words))
+		}
+		for _, w := range words {
+			if w == "" {
+				continue
+			}
+			c.blocklist[strings.ToLower(w)] = true
+		}
+	}
+}
+
 const (
-	strictMinLength  = 12
+	strictMinLength = 12
 	lenientMinLength = 8
 )
 
@@ -91,7 +111,7 @@ func Evaluate(password string, opts ...Option) Result {
 	}
 
 	lower := strings.ToLower(password)
-	if isCommonPassword(lower) {
+	if isCommonPassword(lower) || cfg.blocklist[lower] {
 		failures = append(failures, "must not be a commonly used password")
 	}
 

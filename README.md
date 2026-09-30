@@ -65,6 +65,14 @@ character classes from 4 to 3, and skips the repeated/sequential run check.
 It does not skip the common-password blocklist or the user-input check —
 those apply either way.
 
+Add your own blocked passwords, such as application-specific terms or a
+breach list you already have. Entries must match the whole password, ignoring
+case, and apply in both modes:
+
+```go
+result := strictpass.Evaluate(candidate, strictpass.WithBlocklist("Acme2026!Launch"))
+```
+
 Override the minimum length directly if neither default fits:
 
 ```go

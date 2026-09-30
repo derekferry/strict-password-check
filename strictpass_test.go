@@ -69,6 +69,39 @@ func TestUserInputsRejectedInBothModes(t *testing.T) {
 	}
 }
 
+func TestWithBlocklistRejectsCustomEntries(t *testing.T) {
+	password := "Qx7!vLp9$mRt2Zw"
+
+	if res := Evaluate(password); !res.Passed {
+		t.Fatalf("expected %q to pass without a custom blocklist, got: %v", password, res.Failures)
+	}
+
+	// Matching ignores case on both sides.
+	for _, opts := range [][]Option{
+		{WithBlocklist("qX7!VLP9$MRT2ZW")},
+		{WithBlocklist("other", password)},
+		{Lenient(), WithBlocklist(password)},
+	} {
+		res := Evaluate(password, opts...)
+		if res.Passed {
+			t.Fatalf("expected blocklisted password to fail")
+		}
+	}
+}
+
+func TestWithBlocklistAccumulatesAndIgnoresEmpty(t *testing.T) {
+	opts := []Option{WithBlocklist("", "Alpha-Bravo-9!x"), WithBlocklist("Charlie-Delta-7!y")}
+
+	for _, pw := range []string{"Alpha-Bravo-9!x", "Charlie-Delta-7!y"} {
+		if Evaluate(pw, opts...).Passed {
+			t.Fatalf("expected %q to be blocked", pw)
+		}
+	}
+	if res := Evaluate("Qx7!vLp9$mRt2Zw", opts...); !res.Passed {
+		t.Fatalf("unrelated password should pass, got: %v", res.Failures)
+	}
+}
+
 func TestMinLengthOverride(t *testing.T) {
 	res := Evaluate("Ab1!Ab1!Ab1!Ab1!Ab1!", MinLength(20))
 	if len(res.Failures) > 0 && res.Score < 0 {
